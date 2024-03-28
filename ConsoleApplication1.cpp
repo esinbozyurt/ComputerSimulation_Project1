@@ -53,16 +53,15 @@ public:
     }
 
     void simulateYear(std::mt19937& gen, std::normal_distribution<>& lifeExpectancyDist) {
-        std::shuffle(politicians.begin(), politicians.end(), gen); // Randomize the order of politicians
+        std::shuffle(politicians.begin(), politicians.end(), gen); 
         for (auto& politician : politicians) {
-            politician = Politician(politician.getAge() + 1); // Increment age
+            politician = Politician(politician.getAge() + 1); 
         }
 
-        // Remove those who surpass life expectancy
+ 
         politicians.erase(std::remove_if(politicians.begin(), politicians.end(),
             [&lifeExpectancyDist, &gen](const Politician& p) { return p.getAge() > lifeExpectancyDist(gen); }), politicians.end());
 
-        // Update PSI based on office fill rates and re-election penalties
         psi += UNFILLED_POSITION_PENALTY * (QUAESTORES_PER_YEAR - QUAESTORES_PER_YEAR) +
             UNFILLED_POSITION_PENALTY * (AEDILES_PER_YEAR - AEDILES_PER_YEAR) +
             UNFILLED_POSITION_PENALTY * (PRAETORS_PER_YEAR - PRAETORS_PER_YEAR) +
