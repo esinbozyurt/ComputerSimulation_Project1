@@ -24,7 +24,6 @@ const int ANNUAL_INFLUX_STD_DEV = 5;
 const int LIFE_EXPECTANCY_MEAN = 55;
 const int LIFE_EXPECTANCY_STD_DEV = 10;
 
-
 class Politician {
 public:
     Politician(int age) : age(age) {}
@@ -32,7 +31,6 @@ public:
 private:
     int age;
 };
-
 
 class Simulation {
 public:
@@ -53,22 +51,21 @@ public:
     }
 
     void simulateYear(std::mt19937& gen, std::normal_distribution<>& lifeExpectancyDist) {
-        std::shuffle(politicians.begin(), politicians.end(), gen); 
+        std::shuffle(politicians.begin(), politicians.end(), gen);
         for (auto& politician : politicians) {
-            politician = Politician(politician.getAge() + 1); 
+            politician = Politician(politician.getAge() + 1);
         }
 
- 
         politicians.erase(std::remove_if(politicians.begin(), politicians.end(),
             [&lifeExpectancyDist, &gen](const Politician& p) { return p.getAge() > lifeExpectancyDist(gen); }), politicians.end());
 
-        psi += UNFILLED_POSITION_PENALTY * (QUAESTORES_PER_YEAR - QUAESTORES_PER_YEAR) +
-            UNFILLED_POSITION_PENALTY * (AEDILES_PER_YEAR - AEDILES_PER_YEAR) +
-            UNFILLED_POSITION_PENALTY * (PRAETORS_PER_YEAR - PRAETORS_PER_YEAR) +
-            UNFILLED_POSITION_PENALTY * (CONSULS_PER_YEAR - CONSULS_PER_YEAR);
+        psi += UNFILLED_POSITION_PENALTY * (QUAESTORES_PER_YEAR - countPoliticians(MINIMUM_AGE_QUAESTOR, MINIMUM_AGE_AEDILE)) +
+            UNFILLED_POSITION_PENALTY * (AEDILES_PER_YEAR - countPoliticians(MINIMUM_AGE_AEDILE, MINIMUM_AGE_PRAETOR)) +
+            UNFILLED_POSITION_PENALTY * (PRAETORS_PER_YEAR - countPoliticians(MINIMUM_AGE_PRAETOR, MINIMUM_AGE_CONSUL)) +
+            UNFILLED_POSITION_PENALTY * (CONSULS_PER_YEAR - countPoliticians(MINIMUM_AGE_CONSUL, LIFE_EXPECTANCY_MEAN));
 
         if (year % YEARS_BETWEEN_CONSUL_REELECTION == 0) {
-            psi += CONSECUTIVE_CONSUL_REELECTION_PENALTY * (CONSULS_PER_YEAR - CONSULS_PER_YEAR);
+            psi += CONSECUTIVE_CONSUL_REELECTION_PENALTY * (CONSULS_PER_YEAR - countPoliticians(MINIMUM_AGE_CONSUL, LIFE_EXPECTANCY_MEAN));
         }
     }
 
@@ -81,7 +78,7 @@ public:
         for (year = 0; year < TOTAL_YEARS; ++year) {
             int influx = static_cast<int>(influxDist(gen));
             for (int i = 0; i < influx; ++i) {
-                politicians.emplace_back(MINIMUM_AGE_QUAESTOR); 
+                politicians.emplace_back(MINIMUM_AGE_QUAESTOR);
             }
 
             simulateYear(gen, lifeExpectancyDist);
@@ -100,11 +97,14 @@ public:
             int age = politician.getAge();
             if (age >= MINIMUM_AGE_QUAESTOR && age < MINIMUM_AGE_AEDILE) {
                 quaestorAges.push_back(age);
-            } else if (age >= MINIMUM_AGE_AEDILE && age < MINIMUM_AGE_PRAETOR) {
+            }
+            else if (age >= MINIMUM_AGE_AEDILE && age < MINIMUM_AGE_PRAETOR) {
                 aedileAges.push_back(age);
-            } else if (age >= MINIMUM_AGE_PRAETOR && age < MINIMUM_AGE_CONSUL) {
+            }
+            else if (age >= MINIMUM_AGE_PRAETOR && age < MINIMUM_AGE_CONSUL) {
                 praetorAges.push_back(age);
-            } else if (age >= MINIMUM_AGE_CONSUL) {
+            }
+            else if (age >= MINIMUM_AGE_CONSUL) {
                 consulAges.push_back(age);
             }
         }
@@ -121,7 +121,7 @@ public:
             double averageAge = static_cast<double>(totalAges) / ages.size();
 
             return std::make_pair(static_cast<unsigned __int64>(ages.size()), averageAge);
-        };
+            };
 
         auto quaestorSummary = calculateSummary(quaestorAges);
         auto aedileSummary = calculateSummary(aedileAges);
@@ -139,6 +139,11 @@ private:
     int psi;
     int year;
     std::vector<Politician> politicians;
+
+    int countPoliticians(int minAge, int maxAge) {
+        return std::count_if(politicians.begin(), politicians.end(),
+            [minAge, maxAge](const Politician& p) { return p.getAge() >= minAge && p.getAge() < maxAge; });
+    }
 };
 
 int main() {
@@ -152,7 +157,6 @@ int main() {
     std::cout << "Aedile: " << static_cast<double>(AEDILES_PER_YEAR) / TOTAL_YEARS * 100 << "%" << std::endl;
     std::cout << "Praetor: " << static_cast<double>(PRAETORS_PER_YEAR) / TOTAL_YEARS * 100 << "%" << std::endl;
     std::cout << "Consul: " << static_cast<double>(CONSULS_PER_YEAR) / TOTAL_YEARS * 100 << "%" << std::endl;
-
 
     simulation.calculateAgeDistribution();
 
